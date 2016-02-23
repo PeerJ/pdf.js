@@ -1934,8 +1934,8 @@ html[dir='rtl'] #documentPropertiesOverlay .row > * {
   }
 }
 
-.toolbarButton#sidebarToggle
-.toolbarButton#openFile
+.toolbarButton#sidebarToggle,
+.toolbarButton#openFile,
 .toolbarButton#viewBookmark {
   display: none;
 }
