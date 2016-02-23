@@ -56,7 +56,7 @@ var ROOT_DIR = __dirname + '/', // absolute path to project's root
     MINIFIED_DIR = BUILD_DIR + 'minified/',
     SINGLE_FILE_DIR = BUILD_DIR + 'singlefile/',
     COMPONENTS_DIR = BUILD_DIR + 'components/',
-    REPO = 'git@github.com:mozilla/pdf.js.git',
+    REPO = 'git@github.com:peerj/pdf.js.git',
     MOZCENTRAL_PREF_PREFIX = 'pdfjs',
     FIREFOX_PREF_PREFIX = 'extensions.uriloader@pdf.js',
     MOZCENTRAL_STREAM_CONVERTER_ID = 'd0c5195d-e798-49d4-b1d3-9324328b2291',
@@ -262,6 +262,50 @@ target.web = function() {
         GH_PAGES_DIR + '/getting_started/index.html');
     sed('-i', /BETA_VERSION/g, config.betaVersion,
         GH_PAGES_DIR + '/getting_started/index.html');
+    echo('Done building with wintersmith.');
+
+    var reason = process.env['PDFJS_UPDATE_REASON'];
+    cd(GH_PAGES_DIR);
+    exec('git init');
+    exec('git remote add origin ' + REPO);
+    exec('git add -A');
+    exec('git commit -am "gh-pages site created via make.js script" -m ' +
+         '"PDF.js version ' + VERSION + (reason ? ' - ' + reason : '') + '"');
+    exec('git branch -m gh-pages');
+
+    echo();
+    echo('Website built in ' + GH_PAGES_DIR);
+  });
+};
+
+//
+// make viewer
+// Generates the website for the project, by checking out the gh-pages branch
+// underneath the build directory, and then moving the various viewer files
+// into place.
+//
+target.viewer = function() {
+  target.generic();
+
+  echo();
+  echo('### Creating web site');
+
+  if (test('-d', GH_PAGES_DIR)) {
+    rm('-rf', GH_PAGES_DIR);
+  }
+
+  mkdir('-p', GH_PAGES_DIR + '/web');
+  mkdir('-p', GH_PAGES_DIR + '/web/images');
+  mkdir('-p', GH_PAGES_DIR + BUILD_DIR);
+
+  cp('-R', GENERIC_DIR + '/*', GH_PAGES_DIR);
+
+  var wintersmith = require('wintersmith');
+  var env = wintersmith('docs/config.json');
+  env.build(GH_PAGES_DIR, function (error) {
+    if (error) {
+      throw error;
+    }
     echo('Done building with wintersmith.');
 
     var reason = process.env['PDFJS_UPDATE_REASON'];

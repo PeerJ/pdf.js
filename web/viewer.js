@@ -1334,6 +1334,7 @@ window.PDFView = PDFViewerApplication; // obsolete name, using it as an alias
 
 //#if GENERIC
 var HOSTED_VIEWER_ORIGINS = ['null',
+  'http://127.0.0.1:8080', 'https://peerj.github.io',
   'http://mozilla.github.io', 'https://mozilla.github.io'];
 function validateFileURL(file) {
   try {
