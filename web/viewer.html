@@ -95,6 +95,17 @@ See https://github.com/adobe-type-tools/cmap-resources
 <!--#include viewer-snippet-minified.html-->
 <!--#endif-->
 
+    <script>
+    window.hypothesisConfig = function () {
+      return {
+        constructor: Annotator.PdfSidebar,
+        app: 'https://hypothes.is/app.html',
+        showHighlights: true,
+      };
+    };
+    </script>
+
+    <script defer async src="https://hypothes.is/embed.js"></script>
   </head>
 
   <body tabindex="1" class="loadingInProgress">

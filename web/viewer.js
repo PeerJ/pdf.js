@@ -493,6 +493,13 @@ var PDFViewerApplication = {
     }
   },
 
+  setCanonicalUrl: function pdfViewSetCanonical(url) {
+    var link = document.createElement('link');
+    link.setAttribute('rel', 'canonical');
+    link.setAttribute('href', url);
+    document.head.appendChild(link);
+  },
+
   setTitle: function pdfViewSetTitle(title) {
     if (this.isViewerEmbedded) {
       // Embedded PDF viewers should not be changing their parent page's title.
@@ -573,11 +580,13 @@ var PDFViewerApplication = {
     var parameters = Object.create(null);
     if (typeof file === 'string') { // URL
       this.setTitleUsingUrl(file);
+      this.setCanonicalUrl(file);
       parameters.url = file;
     } else if (file && 'byteLength' in file) { // ArrayBuffer
       parameters.data = file;
     } else if (file.url && file.originalUrl) {
       this.setTitleUsingUrl(file.originalUrl);
+      this.setCanonicalUrl(file.originalUrl);
       parameters.url = file.url;
     }
     if (args) {
