@@ -32,6 +32,7 @@ var AnnotationBorderStyleType = sharedUtil.AnnotationBorderStyleType;
 var AnnotationType = sharedUtil.AnnotationType;
 var Util = sharedUtil.Util;
 var addLinkAttributes = sharedUtil.addLinkAttributes;
+var getFilenameFromUrl = sharedUtil.getFilenameFromUrl;
 var warn = sharedUtil.warn;
 var CustomStyle = displayDOMUtils.CustomStyle;
 
@@ -42,6 +43,7 @@ var CustomStyle = displayDOMUtils.CustomStyle;
  * @property {PDFPage} page
  * @property {PageViewport} viewport
  * @property {IPDFLinkService} linkService
+ * @property {DownloadManager} downloadManager
  */
 
 /**
@@ -83,6 +85,9 @@ AnnotationElementFactory.prototype =
       case AnnotationType.STRIKEOUT:
         return new StrikeOutAnnotationElement(parameters);
 
+      case AnnotationType.FILEATTACHMENT:
+        return new FileAttachmentAnnotationElement(parameters);
+
       default:
         return new AnnotationElement(parameters);
     }
@@ -101,6 +106,7 @@ var AnnotationElement = (function AnnotationElementClosure() {
     this.page = parameters.page;
     this.viewport = parameters.viewport;
     this.linkService = parameters.linkService;
+    this.downloadManager = parameters.downloadManager;
 
     if (isRenderable) {
       this.container = this._createContainer();
@@ -197,6 +203,43 @@ var AnnotationElement = (function AnnotationElementClosure() {
       container.style.height = height + 'px';
 
       return container;
+    },
+
+    /**
+     * Create a popup for the annotation's HTML element. This is used for
+     * annotations that do not have a Popup entry in the dictionary, but
+     * are of a type that works with popups (such as Highlight annotations).
+     *
+     * @private
+     * @param {HTMLSectionElement} container
+     * @param {HTMLDivElement|HTMLImageElement|null} trigger
+     * @param {Object} data
+     * @memberof AnnotationElement
+     */
+    _createPopup:
+        function AnnotationElement_createPopup(container, trigger, data) {
+      // If no trigger element is specified, create it.
+      if (!trigger) {
+        trigger = document.createElement('div');
+        trigger.style.height = container.style.height;
+        trigger.style.width = container.style.width;
+        container.appendChild(trigger);
+      }
+
+      var popupElement = new PopupElement({
+        container: container,
+        trigger: trigger,
+        color: data.color,
+        title: data.title,
+        contents: data.contents,
+        hideWrapper: true
+      });
+      var popup = popupElement.render();
+
+      // Position the popup next to the annotation's container.
+      popup.style.left = container.style.width;
+
+      container.appendChild(popup);
     },
 
     /**
@@ -327,20 +370,7 @@ var TextAnnotationElement = (function TextAnnotationElementClosure() {
       image.dataset.l10nArgs = JSON.stringify({type: this.data.name});
 
       if (!this.data.hasPopup) {
-        var popupElement = new PopupElement({
-          container: this.container,
-          trigger: image,
-          color: this.data.color,
-          title: this.data.title,
-          contents: this.data.contents,
-          hideWrapper: true
-        });
-        var popup = popupElement.render();
-
-        // Position the popup next to the Text annotation's container.
-        popup.style.left = image.style.width;
-
-        this.container.appendChild(popup);
+        this._createPopup(this.container, image, this.data);
       }
 
       this.container.appendChild(image);
@@ -617,7 +647,8 @@ var PopupElement = (function PopupElementClosure() {
 var HighlightAnnotationElement = (
     function HighlightAnnotationElementClosure() {
   function HighlightAnnotationElement(parameters) {
-    var isRenderable = parameters.data.hasPopup;
+    var isRenderable = !!(parameters.data.hasPopup ||
+                          parameters.data.title || parameters.data.contents);
     AnnotationElement.call(this, parameters, isRenderable);
   }
 
@@ -631,6 +662,11 @@ var HighlightAnnotationElement = (
      */
     render: function HighlightAnnotationElement_render() {
       this.container.className = 'highlightAnnotation';
+
+      if (!this.data.hasPopup) {
+        this._createPopup(this.container, null, this.data);
+      }
+
       return this.container;
     }
   });
@@ -645,7 +681,8 @@ var HighlightAnnotationElement = (
 var UnderlineAnnotationElement = (
     function UnderlineAnnotationElementClosure() {
   function UnderlineAnnotationElement(parameters) {
-    var isRenderable = parameters.data.hasPopup;
+    var isRenderable = !!(parameters.data.hasPopup ||
+                          parameters.data.title || parameters.data.contents);
     AnnotationElement.call(this, parameters, isRenderable);
   }
 
@@ -659,6 +696,11 @@ var UnderlineAnnotationElement = (
      */
     render: function UnderlineAnnotationElement_render() {
       this.container.className = 'underlineAnnotation';
+
+      if (!this.data.hasPopup) {
+        this._createPopup(this.container, null, this.data);
+      }
+
       return this.container;
     }
   });
@@ -672,7 +714,8 @@ var UnderlineAnnotationElement = (
  */
 var SquigglyAnnotationElement = (function SquigglyAnnotationElementClosure() {
   function SquigglyAnnotationElement(parameters) {
-    var isRenderable = parameters.data.hasPopup;
+    var isRenderable = !!(parameters.data.hasPopup ||
+                          parameters.data.title || parameters.data.contents);
     AnnotationElement.call(this, parameters, isRenderable);
   }
 
@@ -686,6 +729,11 @@ var SquigglyAnnotationElement = (function SquigglyAnnotationElementClosure() {
      */
     render: function SquigglyAnnotationElement_render() {
       this.container.className = 'squigglyAnnotation';
+
+      if (!this.data.hasPopup) {
+        this._createPopup(this.container, null, this.data);
+      }
+
       return this.container;
     }
   });
@@ -700,7 +748,8 @@ var SquigglyAnnotationElement = (function SquigglyAnnotationElementClosure() {
 var StrikeOutAnnotationElement = (
     function StrikeOutAnnotationElementClosure() {
   function StrikeOutAnnotationElement(parameters) {
-    var isRenderable = parameters.data.hasPopup;
+    var isRenderable = !!(parameters.data.hasPopup ||
+                          parameters.data.title || parameters.data.contents);
     AnnotationElement.call(this, parameters, isRenderable);
   }
 
@@ -714,11 +763,72 @@ var StrikeOutAnnotationElement = (
      */
     render: function StrikeOutAnnotationElement_render() {
       this.container.className = 'strikeoutAnnotation';
+
+      if (!this.data.hasPopup) {
+        this._createPopup(this.container, null, this.data);
+      }
+
       return this.container;
     }
   });
 
   return StrikeOutAnnotationElement;
+})();
+
+/**
+ * @class
+ * @alias FileAttachmentAnnotationElement
+ */
+var FileAttachmentAnnotationElement = (
+    function FileAttachmentAnnotationElementClosure() {
+  function FileAttachmentAnnotationElement(parameters) {
+    AnnotationElement.call(this, parameters, true);
+
+    this.filename = getFilenameFromUrl(parameters.data.file.filename);
+    this.content = parameters.data.file.content;
+  }
+
+  Util.inherit(FileAttachmentAnnotationElement, AnnotationElement, {
+    /**
+     * Render the file attachment annotation's HTML element in the empty
+     * container.
+     *
+     * @public
+     * @memberof FileAttachmentAnnotationElement
+     * @returns {HTMLSectionElement}
+     */
+    render: function FileAttachmentAnnotationElement_render() {
+      this.container.className = 'fileAttachmentAnnotation';
+
+      var trigger = document.createElement('div');
+      trigger.style.height = this.container.style.height;
+      trigger.style.width = this.container.style.width;
+      trigger.addEventListener('dblclick', this._download.bind(this));
+
+      if (!this.data.hasPopup && (this.data.title || this.data.contents)) {
+        this._createPopup(this.container, trigger, this.data);
+      }
+
+      this.container.appendChild(trigger);
+      return this.container;
+    },
+
+    /**
+     * Download the file attachment associated with this annotation.
+     *
+     * @private
+     * @memberof FileAttachmentAnnotationElement
+     */
+    _download: function FileAttachmentAnnotationElement_download() {
+      if (!this.downloadManager) {
+        warn('Download cannot be started due to unavailable download manager');
+        return;
+      }
+      this.downloadManager.downloadData(this.content, this.filename, '');
+    }
+  });
+
+  return FileAttachmentAnnotationElement;
 })();
 
 /**
@@ -757,7 +867,8 @@ var AnnotationLayer = (function AnnotationLayerClosure() {
           layer: parameters.div,
           page: parameters.page,
           viewport: parameters.viewport,
-          linkService: parameters.linkService
+          linkService: parameters.linkService,
+          downloadManager: parameters.downloadManager
         };
         var element = annotationElementFactory.create(properties);
         if (element.isRenderable) {
