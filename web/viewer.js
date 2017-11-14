@@ -7459,7 +7459,7 @@ window.PDFView = PDFViewerApplication; // obsolete name, using it as an alias
 
 var HOSTED_VIEWER_ORIGINS = ['null',
   'http://127.0.0.1:8080', 'https://peerj.github.io', 'https://s3.amazonaws.com/',
-  'http://mozilla.github.io', 'https://mozilla.github.io'];
+  'http://mozilla.github.io', 'https://mozilla.github.io', 'https://peerj.org'];
 function validateFileURL(file) {
   try {
     var viewerOrigin = new URL(window.location.href).origin || 'null';
