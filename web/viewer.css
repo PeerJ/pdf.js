@@ -1319,7 +1319,7 @@ html[dir='rtl'] .outlineItemToggler::before {
 ::-moz-selection { background: rgba(0,0,255,0.3); }
 
 #errorWrapper {
-  background: none repeat scroll 0 0 #FF5555;
+  background: none repeat scroll 0 0 #ce4444;
   color: white;
   left: 0;
   position: absolute;
