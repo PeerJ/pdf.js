@@ -1934,10 +1934,6 @@ html[dir='rtl'] #documentPropertiesOverlay .row > * {
   }
 }
 
-body {
-  background-color: #faa732;
-}
-
 .toolbarButton#sidebarToggle,
 .toolbarButton#openFile,
 .toolbarButton#viewBookmark {
